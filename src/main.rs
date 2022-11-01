@@ -1,6 +1,6 @@
 use std::{fs, io, path::Path};
 
-use actix_web::{get, web::Data, App, HttpResponse, HttpServer};
+use actix_web::{get, web::Data, App, HttpRequest, HttpResponse, HttpServer};
 use handlebars::Handlebars;
 use sqlx::SqlitePool;
 
@@ -43,14 +43,17 @@ async fn main() -> io::Result<()> {
 
     let args: Args = argh::from_env();
     generate_template_database(&args.database);
-    
+
     println!("connecting to database {}", &args.database);
 
     let database = SqlitePool::connect(&format!("sqlite:{}", &args.database))
         .await
         .expect("Couldn't connect to database file.");
 
-    println!("starting HTTP server at http://{}:{}/", &args.ip, &args.port);
+    println!(
+        "starting HTTP server at http://{}:{}/",
+        &args.ip, &args.port
+    );
 
     HttpServer::new(move || {
         let app_data = Data::new(AppState {
@@ -96,4 +99,39 @@ fn generate_template_registry() -> Handlebars<'static> {
         .unwrap();
 
     return template_registry;
+}
+
+/// returns your optional new user token cookie to set and your user id
+pub async fn manage_cookies(req: &HttpRequest, data: &Data<AppState>) -> (Option<u32>, u32) {
+    match req.cookie("userToken") {
+        Some(cookie) => {
+            let user_token: u32 = cookie.value().parse().unwrap();
+            let user_id: u32 =
+                sqlx::query!("SELECT user_id FROM users WHERE user_token = ?", user_token)
+                    .fetch_one(&data.database)
+                    .await
+                    .expect("failed to get user_id from user_token in users")
+                    .user_id
+                    .try_into()
+                    .expect("sqlite3 returned invalid u32");
+
+            (None, user_id)
+        }
+        // create new user id and user token if the user didn't return a cookie
+        None => {
+            let user_token: u32 = rand::random();
+            let user_id: u32 = rand::random();
+
+            sqlx::query!(
+                "INSERT INTO users ( user_id, user_token ) VALUES ( ?, ? )",
+                user_id,
+                user_token
+            )
+            .execute(&data.database)
+            .await
+            .expect("failed to insert new user_id and user_tokens into users");
+
+            (Some(user_token), user_id)
+        }
+    }
 }
