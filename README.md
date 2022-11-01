@@ -13,5 +13,5 @@ $ make
 
 development:
 ```
-cargo watch -s "make run"
+$ cargo watch -s "make run"
 ```
