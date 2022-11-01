@@ -103,35 +103,40 @@ fn generate_template_registry() -> Handlebars<'static> {
 
 /// returns your optional new user token cookie to set and your user id
 pub async fn manage_cookies(req: &HttpRequest, data: &Data<AppState>) -> (Option<u32>, u32) {
-    match req.cookie("userToken") {
-        Some(cookie) => {
-            let user_token: u32 = cookie.value().parse().unwrap();
-            let user_id: u32 =
-                sqlx::query!("SELECT user_id FROM users WHERE user_token = ?", user_token)
-                    .fetch_one(&data.database)
-                    .await
-                    .expect("failed to get user_id from user_token in users")
-                    .user_id
-                    .try_into()
-                    .expect("sqlite3 returned invalid u32");
-
-            (None, user_id)
-        }
-        // create new user id and user token if the user didn't return a cookie
+    let mut created = false;
+    
+    let user_token: u32 = match req.cookie("userToken") {
+        Some(cookie) => cookie.value().parse().unwrap(),
         None => {
             let user_token: u32 = rand::random();
-            let user_id: u32 = rand::random();
+            created = true;
 
+            // insert the user token into the databse because it's being created for the first time.
             sqlx::query!(
-                "INSERT INTO users ( user_id, user_token ) VALUES ( ?, ? )",
-                user_id,
+                "INSERT INTO users ( user_token ) VALUES ( ? )",
                 user_token
             )
             .execute(&data.database)
             .await
             .expect("failed to insert new user_id and user_tokens into users");
 
-            (Some(user_token), user_id)
+            user_token
         }
+    };
+        
+    let user_id: u32 =
+        sqlx::query!("SELECT user_id FROM users WHERE user_token = ?", user_token)
+            .fetch_one(&data.database)
+            .await
+            .expect("failed to get user_id from user_token in users")
+            .user_id
+            .try_into()
+            .expect("sqlite3 returned invalid u32");
+    
+
+    if created {
+        (Some(user_token), user_id)
+    } else {
+        (None, user_id)
     }
 }
