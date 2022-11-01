@@ -9,6 +9,7 @@ const IP: &'static str = "127.0.0.1";
 const PORT: u16 = 8080;
 
 const INDEX: &'static str = include_str!("index.hbs");
+const CSS: &'static str = include_str!("styles.css");
 
 #[derive(Serialize, Deserialize)]
 struct PageState {
@@ -43,7 +44,7 @@ async fn main() -> io::Result<()> {
 
         let app_data = web::Data::new(AppState { template_registry });
 
-        App::new().app_data(app_data).service(index)
+        App::new().app_data(app_data).service(index).service(css)
     })
     .bind((IP, PORT))?
     .run()
@@ -60,4 +61,11 @@ async fn index(data: web::Data<AppState>) -> HttpResponse {
     HttpResponse::Ok()
         .content_type(ContentType::html())
         .body(page)
+}
+
+#[get("/styles.css")]
+async fn css() -> HttpResponse {
+    HttpResponse::Ok()
+        .content_type("text/css")
+        .body(CSS)
 }
