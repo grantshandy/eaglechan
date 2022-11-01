@@ -11,7 +11,7 @@ pub struct IndexPageState {
 }
 
 #[get("/")]
-pub async fn get_index(req: HttpRequest, data: Data<AppState>) -> HttpResponse {
+pub async fn get_index(data: Data<AppState>) -> HttpResponse {
     let posts: Vec<Post> = sqlx::query_as!(Post, "SELECT * FROM posts")
         .fetch_all(&data.database)
         .await

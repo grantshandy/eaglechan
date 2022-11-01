@@ -1,4 +1,4 @@
-use std::{fs, io, path};
+use std::{fs, io, path::Path};
 
 use actix_web::{get, web::Data, App, HttpResponse, HttpServer};
 use handlebars::Handlebars;
@@ -10,17 +10,26 @@ mod post;
 use index::{get_index, INDEX_TEMPLATE};
 use post::{get_post, POST_TEMPLATE};
 
-const IP: &'static str = "127.0.0.1";
-const PORT: u16 = 8080;
-
-const DATABASE_FILENAME: &'static str = "eaglechan.db";
 const DATABASE_TEMPLATE: &[u8] = include_bytes!("template.db");
-
 const CSS: &'static str = include_str!("css/style.css");
 
 // WEB ROUTES
 // GET "/" -> index::get_index
 // GET "/post_{id}" -> post::get_post
+
+#[derive(argh::FromArgs)]
+/// An anonymous forum.
+struct Args {
+    /// what database to use
+    #[argh(option, default = "\"eaglechan.db\".to_string()")]
+    database: String,
+    /// what port to serve on
+    #[argh(option, default = "8080")]
+    port: u16,
+    /// what ip to serve on
+    #[argh(option, default = "\"127.0.0.1\".to_string()")]
+    ip: String,
+}
 
 #[derive(Debug)]
 pub struct AppState {
@@ -32,13 +41,16 @@ pub struct AppState {
 async fn main() -> io::Result<()> {
     pretty_env_logger::init();
 
-    gen_database_template();
+    let args: Args = argh::from_env();
+    generate_template_database(&args.database);
+    
+    println!("connecting to database {}", &args.database);
 
-    let database = SqlitePool::connect(&format!("sqlite:{}", DATABASE_FILENAME))
+    let database = SqlitePool::connect(&format!("sqlite:{}", &args.database))
         .await
         .expect("Couldn't connect to database file.");
 
-    println!("starting HTTP server at http://{IP}:{PORT}/");
+    println!("starting HTTP server at http://{}:{}/", &args.ip, &args.port);
 
     HttpServer::new(move || {
         let app_data = Data::new(AppState {
@@ -52,7 +64,7 @@ async fn main() -> io::Result<()> {
             .service(get_index)
             .service(get_post)
     })
-    .bind((IP, PORT))?
+    .bind((args.ip, args.port))?
     .run()
     .await
 }
@@ -62,12 +74,12 @@ async fn css() -> HttpResponse {
     HttpResponse::Ok().content_type("text/css").body(CSS)
 }
 
-fn gen_database_template() {
-    if !path::Path::new(DATABASE_FILENAME)
+fn generate_template_database(db_filename: &str) {
+    if !Path::new(db_filename)
         .try_exists()
         .expect("couldn't access filesystem")
     {
-        fs::write(DATABASE_FILENAME, DATABASE_TEMPLATE)
+        fs::write(db_filename, DATABASE_TEMPLATE)
             .expect("couldn't write database template to current directory");
     }
 }
