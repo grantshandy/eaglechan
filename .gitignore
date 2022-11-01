@@ -1,3 +1,5 @@
 /target
 /Cargo.lock
 /src/styles.css
+sqlite3.lib
+sqlite3.dll

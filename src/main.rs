@@ -30,7 +30,7 @@ async fn main() -> io::Result<()> {
 
     HttpServer::new(|| {
         let db_connection = Connection::open(DB_FILENAME).expect("Couldn't connect to database file.");
-                
+
         let app_data = web::Data::new(AppState {
             template_registry: generate_template_registry(),
             db_connection,
@@ -57,7 +57,7 @@ fn generate_template_registry() -> Handlebars<'static> {
 async fn index(data: web::Data<AppState>) -> HttpResponse {
     let page = data
         .template_registry
-        .render("index", &PageState::generate())
+        .render("index", &PageState::generate(&data.db_connection))
         .unwrap();
 
     HttpResponse::Ok()

@@ -1,6 +1,8 @@
 use chrono::Utc;
 use serde::Serialize;
 
+use rusqlite::Connection;
+
 #[derive(Serialize)]
 pub struct PageState {
     time: String,
@@ -8,37 +10,43 @@ pub struct PageState {
 }
 
 impl PageState {
-    pub fn generate() -> Self {
+    pub fn generate(conn: &Connection) -> Self {
+        let posts = Self::get_posts(conn);
+
         Self {
             time: Utc::now().to_rfc3339(),
-            posts: vec![
-                Post {
-                    id: "123456769384745".to_string(),
-                    title: "why foo is better than bar".to_string(),
-                    text: "this is why... blah blah blah blah....".to_string(),
-                    author: "qlawiueyrt03q45jhgiuyqwert".to_string(),
-                },
-                Post {
-                    id: "1234857957892834759".to_string(),
-                    title: "why bar is supreme".to_string(),
-                    text: "this is why... asdfasdfasdfasdf".to_string(),
-                    author: "qlawiueyrt03q45jhgiuyqwert".to_string(),
-                },
-                Post {
-                    id: "11349587123419234875985".to_string(),
-                    title: "why zig is secretly the best".to_string(),
-                    text: "loris whatever...".to_string(),
-                    author: "qlawiueyrt03q45jhgiuyqwert".to_string(),
-                },
-            ],
+            posts: posts,
         }
+    }
+
+    fn get_posts(conn: &Connection) -> Vec<Post> {
+        let mut query = conn.prepare("SELECT id, title, text, author, author_id FROM posts").expect("Failed to get posts.");
+        let post_result = query.query_map([], |row| {
+            Ok(Post {
+                id: row.get(0)?,
+                title: row.get(1)?,
+                text: row.get(2)?,
+                author: row.get(3)?,
+                author_id: row.get(4)?,
+            })
+        }).expect("Failed to get posts.");
+
+        let mut posts = Vec::new();
+
+        for post in post_result {
+            posts.push(post.unwrap());
+        }
+
+        return posts;
     }
 }
 
 #[derive(Serialize)]
+#[derive(Debug)]
 pub struct Post {
-    id: String,
+    id: i32,
     title: String,
     text: String,
     author: String,
+    author_id: i32,
 }
