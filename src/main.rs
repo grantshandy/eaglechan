@@ -4,7 +4,7 @@ use actix_web::{
     get,
     http::header::ContentType,
     web::{Data, Path},
-    App, HttpResponse, HttpServer,
+    App, HttpResponse, HttpServer, post,
 };
 use handlebars::Handlebars;
 use serde::Serialize;
@@ -33,6 +33,8 @@ async fn main() -> io::Result<()> {
         .await
         .expect("Couldn't connect to database file.");
 
+    // sqlx::query!("CREATE TABLE IF NOT EXISTS posts ( id INTEGER PRIMARY KEY, title TEXT NOT NULL, content TEXT NOT NULL, author TEXT NOT NULL);");
+
     println!("starting HTTP server at http://{IP}:{PORT}/");
 
     HttpServer::new(move || {
@@ -45,7 +47,7 @@ async fn main() -> io::Result<()> {
             .app_data(app_data)
             .service(index)
             .service(css)
-            .service(post)
+            .service(get_post)
     })
     .bind((IP, PORT))?
     .run()
@@ -67,7 +69,7 @@ async fn index(data: Data<AppState>) -> HttpResponse {
 }
 
 #[get("/post-{id}")]
-async fn post(id: Path<String>, data: Data<AppState>) -> HttpResponse {
+async fn get_post(id: Path<String>, data: Data<AppState>) -> HttpResponse {
     let id: i32 = id.parse().unwrap();
 
     let post: Post = sqlx::query_as!(Post, "SELECT * FROM posts WHERE id = ? LIMIT 1", id)
@@ -81,6 +83,11 @@ async fn post(id: Path<String>, data: Data<AppState>) -> HttpResponse {
     HttpResponse::Ok()
         .content_type(ContentType::html())
         .body(page)
+}
+
+#[post("/create-post")]
+async fn create_post() -> HttpResponse {
+    HttpResponse::Ok().finish()
 }
 
 #[get("/styles.css")]
