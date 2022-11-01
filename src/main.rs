@@ -2,16 +2,16 @@ use std::io;
 
 use actix_web::{get, http::header::ContentType, web, App, HttpResponse, HttpServer};
 use handlebars::Handlebars;
-use rusqlite::Connection;
 
 mod pagedata;
 
 use pagedata::*;
+use sqlx::SqlitePool;
 
 const IP: &'static str = "127.0.0.1";
 const PORT: u16 = 8080;
 
-const DB_FILENAME: &'static str = "database.db3";
+const DB_FILENAME: &'static str = "sqlite:data.db";
 
 const INDEX: &'static str = include_str!("index.hbs");
 const CSS: &'static str = include_str!("styles.css");
@@ -19,7 +19,7 @@ const CSS: &'static str = include_str!("styles.css");
 #[derive(Debug)]
 struct AppState {
     pub template_registry: Handlebars<'static>,
-    pub db_connection: Connection,
+    pub database: SqlitePool,
 }
 
 #[actix_web::main]
@@ -28,12 +28,14 @@ async fn main() -> io::Result<()> {
 
     println!("starting HTTP server at http://{IP}:{PORT}/");
 
-    HttpServer::new(|| {
-        let db_connection = Connection::open(DB_FILENAME).expect("Couldn't connect to database file.");
+    let database = SqlitePool::connect(DB_FILENAME)
+        .await
+        .expect("Couldn't connect to database file.");
 
+    HttpServer::new(move || {
         let app_data = web::Data::new(AppState {
             template_registry: generate_template_registry(),
-            db_connection,
+            database: database.clone(),
         });
 
         App::new().app_data(app_data).service(index).service(css)
@@ -57,7 +59,7 @@ fn generate_template_registry() -> Handlebars<'static> {
 async fn index(data: web::Data<AppState>) -> HttpResponse {
     let page = data
         .template_registry
-        .render("index", &PageState::generate(&data.db_connection))
+        .render("index", &PageState::generate(&data.database).await)
         .unwrap();
 
     HttpResponse::Ok()
