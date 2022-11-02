@@ -1,5 +1,5 @@
-# eaglechan
-simple online forum like 4chan
+# eaglechan ❌ NO JAVASCRIPT ❌
+simple online forum like 4chan, completely server side rendered
 
 setup:
 ```shell
