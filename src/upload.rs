@@ -47,7 +47,7 @@ pub async fn upload_post(
 
     resp.insert_header((
         header::LOCATION,
-        HeaderValue::from_str(&format!("/post-{post_id}")).expect("invalid header value"),
+        HeaderValue::from_str("/").expect("invalid header value"),
     ));
 
     return resp.finish();

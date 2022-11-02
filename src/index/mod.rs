@@ -19,11 +19,20 @@ pub async fn get_index(req: HttpRequest, data: Data<AppState>) -> HttpResponse {
     let posts: Vec<Post> = sqlx::query_as!(Post, "SELECT * FROM posts")
         .fetch_all(&data.database)
         .await
-        .unwrap();
+        .unwrap()
+        .into_iter()
+        .rev()
+        .collect();
 
     let page: String = data
         .template_registry
-        .render("index", &PageState { user_id, posts })
+        .render(
+            "index",
+            &PageState {
+                user_id,
+                posts,
+            },
+        )
         .unwrap();
 
     return resp.body(page);

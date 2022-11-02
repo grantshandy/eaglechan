@@ -11,7 +11,7 @@
 		<div class="w-full space-y-1">
 			<div class="flow-root">
 				<div class="float-left">
-					<h1 class="text-2xl font-semibold">Main Page</h1>
+					<h1 class="text-2xl font-semibold">Homepage</h1>
 					<p class="text-sm italic">you are user {{user_id}}</p>
 				</div>
 				<a class="float-right underline" href="/write">write new a post</a>
@@ -25,7 +25,7 @@
 				<a class="float-right underline" href="/post-{{ post_id }}">view post</a>
 			</div>
 			<p class="text-sm italic">Created on {{ created }} by user {{ user_id }}.</p>
-			<p>{{ content }}</p>
+   			<p class="md:w-1/2">{{ content }}</p>
 		</div>
 		<hr>
 		{{/each}}
