@@ -2,6 +2,7 @@ use std::{fs, io, path::Path};
 
 use actix_web::{get, web::Data, App, HttpRequest, HttpResponse, HttpServer};
 use handlebars::Handlebars;
+use rand::{distributions::Alphanumeric, Rng};
 use sqlx::SqlitePool;
 
 mod index;
@@ -102,37 +103,40 @@ fn generate_template_registry() -> Handlebars<'static> {
 }
 
 /// returns your optional new user token cookie to set and your user id
-pub async fn manage_cookies(req: &HttpRequest, data: &Data<AppState>) -> (Option<u32>, u32) {
+pub async fn manage_cookies(req: &HttpRequest, data: &Data<AppState>) -> (Option<String>, u32) {
     let mut created = false;
-    
-    let user_token: u32 = match req.cookie("userToken") {
-        Some(cookie) => cookie.value().parse().unwrap(),
+
+    let user_token: String = match req.cookie("userToken") {
+        Some(cookie) => cookie.value().to_string(),
         None => {
-            let user_token: u32 = rand::random();
+            let user_token = base64::encode(
+                rand::thread_rng()
+                    .sample_iter(&Alphanumeric)
+                    .take(10)
+                    .map(char::from)
+                    .collect::<String>(),
+            );
             created = true;
 
+            println!("creating {user_token}");
+
             // insert the user token into the databse because it's being created for the first time.
-            sqlx::query!(
-                "INSERT INTO users ( user_token ) VALUES ( ? )",
-                user_token
-            )
-            .execute(&data.database)
-            .await
-            .expect("failed to insert new user_id and user_tokens into users");
+            sqlx::query!("INSERT INTO users ( user_token ) VALUES ( ? )", user_token)
+                .execute(&data.database)
+                .await
+                .expect("failed to insert new user_id and user_tokens into users");
 
             user_token
         }
     };
-        
-    let user_id: u32 =
-        sqlx::query!("SELECT user_id FROM users WHERE user_token = ?", user_token)
-            .fetch_one(&data.database)
-            .await
-            .expect("failed to get user_id from user_token in users")
-            .user_id
-            .try_into()
-            .expect("sqlite3 returned invalid u32");
-    
+
+    let user_id: u32 = sqlx::query!("SELECT user_id FROM users WHERE user_token = ?", user_token)
+        .fetch_one(&data.database)
+        .await
+        .expect("failed to get user_id from user_token in users")
+        .user_id
+        .try_into()
+        .expect("sqlite3 returned invalid u32");
 
     if created {
         (Some(user_token), user_id)
