@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<title>{{ post.content }}</title>
+	<meta charset="UTF-8" />
+	<link rel="stylesheet" type="text/css" href="./styles.css" />
+	<meta name="viewport" content="width=device-width,initial-scale=1" />
+</head>
+<body>
+	<div class="min-h-screen space-y-2 p-3">
+		<div class="w-full space-y-1">
+			<div class="flow-root">
+				<div class="float-left">
+					<h1 class="text-2xl font-semibold">Viewing Post "{{ post.title }}"</h1>
+					<p class="text-sm italic">you are user {{ user_id }}</p>
+				</div>
+				<a class="float-right underline" href="/">back to home</a>
+			</div>
+			<hr>
+		</div>
+		<div class="space-y-3">
+			<p class="italic">Created on {{ post.created }} by user {{ post.user_id }}.</p>
+			<p>{{ post.content }}</p>
+		</div>
+	</div>
+</body>
+</html>

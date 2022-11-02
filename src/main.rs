@@ -1,22 +1,30 @@
 use std::{fs, io, path::Path};
 
-use actix_web::{get, web::Data, App, HttpRequest, HttpResponse, HttpServer};
+use actix_web::{
+    get,
+    http::header::{self, HeaderValue},
+    web::Data,
+    App, HttpRequest, HttpResponse, HttpResponseBuilder, HttpServer,
+};
+use chrono::NaiveDateTime;
 use handlebars::Handlebars;
 use rand::{distributions::Alphanumeric, Rng};
+use serde::Serialize;
 use sqlx::SqlitePool;
 
 mod index;
-mod post;
-
-use index::{get_index, INDEX_TEMPLATE};
-use post::{get_post, POST_TEMPLATE};
+mod upload;
+mod view_post;
+mod write_post;
 
 const DATABASE_TEMPLATE: &[u8] = include_bytes!("template.db");
 const CSS: &'static str = include_str!("css/style.css");
 
 // WEB ROUTES
-// GET "/" -> index::get_index
-// GET "/post_{id}" -> post::get_post
+// GET "/" -> index::get_index                           DONE
+// GET "/post-{id}" -> view_post::get_post               DONE
+// GET "/write" -> write_post::write_post                
+// POST "/upload" -> upload::upload_post                 DONE
 
 #[derive(argh::FromArgs)]
 /// An anonymous forum.
@@ -36,6 +44,15 @@ struct Args {
 pub struct AppState {
     pub template_registry: Handlebars<'static>,
     pub database: SqlitePool,
+}
+
+#[derive(Serialize, Debug)]
+pub struct Post {
+    pub post_id: String,
+    pub user_id: String,
+    pub created: NaiveDateTime,
+    pub title: String,
+    pub content: String,
 }
 
 #[actix_web::main]
@@ -65,8 +82,10 @@ async fn main() -> io::Result<()> {
         App::new()
             .app_data(app_data)
             .service(css)
-            .service(get_index)
-            .service(get_post)
+            .service(index::get_index)
+            .service(upload::upload_post)
+            .service(view_post::get_post)
+            .service(write_post::get_write_post)
     })
     .bind((args.ip, args.port))?
     .run()
@@ -92,55 +111,68 @@ fn generate_template_registry() -> Handlebars<'static> {
     let mut template_registry = Handlebars::new();
 
     template_registry
-        .register_template_string("index", INDEX_TEMPLATE)
+        .register_template_string("index", index::TEMPLATE)
         .unwrap();
 
     template_registry
-        .register_template_string("post", POST_TEMPLATE)
+        .register_template_string("view_post", view_post::TEMPLATE)
+        .unwrap();
+
+    template_registry
+        .register_template_string("write_post", write_post::TEMPLATE)
         .unwrap();
 
     return template_registry;
 }
 
-/// returns your optional new user token cookie to set and your user id
-pub async fn manage_cookies(req: &HttpRequest, data: &Data<AppState>) -> (Option<String>, u32) {
-    let mut created = false;
-
-    let user_token: String = match req.cookie("userToken") {
-        Some(cookie) => cookie.value().to_string(),
+/// returns your user id and a response that may contain a set cookie for the user.
+pub async fn manage_cookies(
+    req: &HttpRequest,
+    data: &Data<AppState>,
+    response: &mut HttpResponseBuilder,
+) -> String {
+    let (user_token, created): (String, bool) = match req.cookie("userToken") {
+        Some(cookie) => (cookie.value().to_string(), false),
         None => {
-            let user_token = base64::encode(
-                rand::thread_rng()
-                    .sample_iter(&Alphanumeric)
-                    .take(10)
-                    .map(char::from)
-                    .collect::<String>(),
-            );
-            created = true;
+            let user_id = rand::thread_rng()
+                .sample_iter(&Alphanumeric)
+                .take(6)
+                .map(char::from)
+                .collect::<String>();
 
-            println!("creating {user_token}");
+            let user_token = rand::thread_rng()
+                .sample_iter(&Alphanumeric)
+                .take(10)
+                .map(char::from)
+                .collect::<String>();
 
-            // insert the user token into the databse because it's being created for the first time.
-            sqlx::query!("INSERT INTO users ( user_token ) VALUES ( ? )", user_token)
-                .execute(&data.database)
-                .await
-                .expect("failed to insert new user_id and user_tokens into users");
+            sqlx::query!(
+                "INSERT INTO users ( user_token, user_id ) VALUES ( ?, ? )",
+                user_token,
+                user_id
+            )
+            .execute(&data.database)
+            .await
+            .expect("failed to insert new user_id and user_tokens into users");
 
-            user_token
+            (user_token, true)
         }
     };
 
-    let user_id: u32 = sqlx::query!("SELECT user_id FROM users WHERE user_token = ?", user_token)
-        .fetch_one(&data.database)
-        .await
-        .expect("failed to get user_id from user_token in users")
-        .user_id
-        .try_into()
-        .expect("sqlite3 returned invalid u32");
+    let user_id: String =
+        sqlx::query!("SELECT user_id FROM users WHERE user_token = ?", user_token)
+            .fetch_one(&data.database)
+            .await
+            .expect("failed to get user_id from user_token in users")
+            .user_id;
 
     if created {
-        (Some(user_token), user_id)
-    } else {
-        (None, user_id)
+        response.insert_header((
+            header::SET_COOKIE,
+            HeaderValue::from_str(&format!("userToken={user_token}"))
+                .expect("invalud header value"),
+        ));
     }
+
+    return user_id;
 }

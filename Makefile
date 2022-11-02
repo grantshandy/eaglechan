@@ -8,3 +8,7 @@ server:
 	
 run: css
 	cargo run
+
+clean:
+	cargo clean
+	rm ./src/css/style.css
