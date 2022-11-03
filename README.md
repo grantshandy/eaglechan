@@ -1,10 +1,9 @@
 # eaglechan ❌ NO JAVASCRIPT ❌
 simple online forum like 4chan, completely server side rendered
 
-setup:
-```shell
-$ export DATABASE_URL="sqlite:src/template.db"
-```
+requirements:
+ - tailwindcss cli (from npx)
+ - rust
 
 building:
 ```shell
