@@ -1,5 +1,9 @@
-use std::{fs, io, path::Path};
+use std::{fs, io, path::Path, time::Duration};
 
+use actix_extensible_rate_limit::{
+    backend::{memory::InMemoryBackend, SimpleInputFunctionBuilder},
+    RateLimiter,
+};
 use actix_web::{
     get,
     http::header::{self, HeaderValue},
@@ -83,6 +87,17 @@ async fn main() -> io::Result<()> {
     );
 
     HttpServer::new(move || {
+        // init rate limiter
+        let rate_limit_backend = InMemoryBackend::builder().build();
+        let rate_limit_input = SimpleInputFunctionBuilder::new(Duration::from_secs(60), 100)
+            .real_ip_key()
+            .build();
+
+        let rate_limiter = RateLimiter::builder(rate_limit_backend, rate_limit_input)
+            .add_headers()
+            .build();
+
+        // init app data
         let app_data = Data::new(AppState {
             template_registry: generate_template_registry(),
             database: database.clone(),
@@ -90,6 +105,7 @@ async fn main() -> io::Result<()> {
 
         App::new()
             .app_data(app_data)
+            .wrap(rate_limiter)
             .service(css)
             .service(index::get_index)
             .service(view_post::get_post)

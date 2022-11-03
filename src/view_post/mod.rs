@@ -41,7 +41,10 @@ pub async fn get_post(
         sqlx::query_as!(Comment, "SELECT * FROM comments WHERE post_id = ?", post_id)
             .fetch_all(&data.database)
             .await
-            .expect("failed to get comments");
+            .expect("failed to get comments")
+            .into_iter()
+            .rev()
+            .collect();
 
     let page = data
         .template_registry
