@@ -4,3 +4,4 @@
 sqlite3.lib
 sqlite3.dll
 eaglechan.db
+package-lock.json
