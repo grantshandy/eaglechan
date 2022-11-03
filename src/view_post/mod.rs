@@ -5,7 +5,7 @@ use actix_web::{
 };
 use serde::Serialize;
 
-use crate::{AppState, Post};
+use crate::{AppState, Comment, Post};
 
 pub const TEMPLATE: &'static str = include_str!("view_post.hbs");
 
@@ -14,6 +14,7 @@ struct PageState {
     user_id: String,
     post_id: String,
     post: Post,
+    comments: Vec<Comment>,
 }
 
 #[get("/post-{id}")]
@@ -36,6 +37,12 @@ pub async fn get_post(
     .await
     .expect("no post found");
 
+    let comments: Vec<Comment> =
+        sqlx::query_as!(Comment, "SELECT * FROM comments WHERE post_id = ?", post_id)
+            .fetch_all(&data.database)
+            .await
+            .expect("failed to get comments");
+
     let page = data
         .template_registry
         .render(
@@ -44,6 +51,7 @@ pub async fn get_post(
                 user_id,
                 post_id,
                 post,
+                comments,
             },
         )
         .unwrap();

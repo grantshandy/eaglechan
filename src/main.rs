@@ -21,10 +21,11 @@ const DATABASE_TEMPLATE: &[u8] = include_bytes!("template.db");
 const CSS: &'static str = include_str!("css/style.css");
 
 // WEB ROUTES
-// GET "/" -> index::get_index                           DONE
-// GET "/post-{id}" -> view_post::get_post               DONE
-// GET "/write" -> write_post::write_post                
-// POST "/upload" -> upload::upload_post                 DONE
+// GET "/" -> index::get_index                                 DONE
+// GET "/post-{post_id}" -> view_post::get_post                DONE
+// GET "/write" -> write_post::get_write_post                  DONE
+// POST "/upload" -> upload::upload_post                       DONE
+// POST "/comment-{post_id}" upload::upload_comment            DONE
 
 #[derive(argh::FromArgs)]
 /// An anonymous forum.
@@ -52,6 +53,14 @@ pub struct Post {
     pub user_id: String,
     pub created: NaiveDateTime,
     pub title: String,
+    pub content: String,
+}
+
+#[derive(Serialize, Debug)]
+pub struct Comment {
+    pub user_id: String,
+    pub post_id: String,
+    pub created: NaiveDateTime,
     pub content: String,
 }
 
@@ -83,9 +92,10 @@ async fn main() -> io::Result<()> {
             .app_data(app_data)
             .service(css)
             .service(index::get_index)
-            .service(upload::upload_post)
             .service(view_post::get_post)
             .service(write_post::get_write_post)
+            .service(upload::upload_post)
+            .service(upload::upload_comment)
     })
     .bind((args.ip, args.port))?
     .run()
