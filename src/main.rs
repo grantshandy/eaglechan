@@ -57,6 +57,7 @@ pub struct Post {
     pub post_id: String,
     pub user_id: String,
     pub created: NaiveDateTime,
+    pub last_updated: NaiveDateTime,
     pub title: String,
     pub content: String,
 }
@@ -187,12 +188,31 @@ pub async fn manage_cookies(
         }
     };
 
-    let user_id: String =
+    let user_id: String = match 
         sqlx::query!("SELECT user_id FROM users WHERE user_token = ?", user_token)
             .fetch_one(&data.database)
+            .await {
+        Ok(record) => record.user_id,
+        Err(_) => {
+            // if the user has an invalid user token (from an old session), then make a new one just to hold them over.
+            let user_id = rand::thread_rng()
+                .sample_iter(&Alphanumeric)
+                .take(6)
+                .map(char::from)
+                .collect::<String>();
+            
+            sqlx::query!(
+                "INSERT INTO users ( user_token, user_id ) VALUES ( ?, ? )",
+                user_token,
+                user_id
+            )
+            .execute(&data.database)
             .await
-            .expect("failed to get user_id from user_token in users")
-            .user_id;
+            .expect("failed to insert new user_id and user_tokens into users");
+            
+            user_id
+        }
+    };
 
     if created {
         response.insert_header((

@@ -32,12 +32,14 @@ pub async fn upload_post(
         .collect::<String>();
 
     let created: NaiveDateTime = Utc::now().naive_local();
+    let last_updated = created.clone();
 
     sqlx::query!(
-        "INSERT INTO posts ( post_id, user_id, created, title, content ) VALUES ( ?, ?, ?, ?, ? )",
+        "INSERT INTO posts ( post_id, user_id, created, last_updated, title, content ) VALUES ( ?, ?, ?, ?, ?, ? )",
         post_id,
         user_id,
         created,
+        last_updated,
         form.title,
         form.content,
     )
