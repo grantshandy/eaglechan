@@ -7,7 +7,7 @@ server:
 	cargo build --release
 	
 run: css
-	cargo run
+	RUST_LOG=info DATABASE_URL=sqlite:src/template.db cargo run
 
 clean:
 	cargo clean

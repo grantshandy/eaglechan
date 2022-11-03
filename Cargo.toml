@@ -7,7 +7,7 @@ edition = "2021"
 
 [dependencies]
 actix-extensible-rate-limit = "0.2"
-actix-web = "4.2"
+actix-web = { version = "4.2" }
 argh = "0.1"
 chrono = { version = "0.4", features = ["serde"] }
 handlebars = "4.3"

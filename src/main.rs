@@ -7,6 +7,7 @@ use actix_extensible_rate_limit::{
 use actix_web::{
     get,
     http::header::{self, HeaderValue},
+    middleware::Logger,
     web::Data,
     App, HttpRequest, HttpResponse, HttpResponseBuilder, HttpServer,
 };
@@ -106,6 +107,7 @@ async fn main() -> io::Result<()> {
         App::new()
             .app_data(app_data)
             .wrap(rate_limiter)
+            .wrap(Logger::default())
             .service(css)
             .service(index::get_index)
             .service(view_post::get_post)
@@ -195,8 +197,10 @@ pub async fn manage_cookies(
     if created {
         response.insert_header((
             header::SET_COOKIE,
-            HeaderValue::from_str(&format!("userToken={user_token}"))
-                .expect("invalud header value"),
+            HeaderValue::from_str(&format!(
+                "userToken={user_token}; Expires=Thu, 31 Oct 2040 00:00:00 GMT;"
+            ))
+            .expect("invalud header value"),
         ));
     }
 
