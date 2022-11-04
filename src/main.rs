@@ -79,7 +79,7 @@ async fn main() -> io::Result<()> {
 
         let rate_limiter = RateLimiter::builder(rate_limit_backend, rate_limit_input)
             .request_denied_response(
-                |x| HttpResponse::Ok().body("400 req per min rate limit being imposed"),
+                |_| HttpResponse::Ok().body("400 req per min rate limit being imposed"),
             )
             .add_headers()
             .build();
