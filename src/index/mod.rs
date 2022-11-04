@@ -40,17 +40,16 @@ pub async fn get_index(req: HttpRequest, data: Data<AppState>) -> HttpResponse {
         .map(|x| {
             let mut title = x.title;
 
-            // not I did not mean to use .chars().count(), idiot.
             if title.len() > TITLE_CHAR_LIMIT {
-                title = title.drain(..TITLE_CHAR_LIMIT).collect();
+                title = truncate_by_chars(title, TITLE_CHAR_LIMIT);
                 title.push_str("...");
             }
 
             let mut content = x.content;
 
             let overflow = if content.len() > CONTENT_CHAR_LIMIT {
-                content = content.drain(..CONTENT_CHAR_LIMIT).collect();
-                content = content.replace("\n", "");
+                println!("{}", content.len());
+                content = truncate_by_chars(content, CONTENT_CHAR_LIMIT);
                 content.push_str("...");
 
                 true
@@ -85,4 +84,8 @@ pub async fn get_index(req: HttpRequest, data: Data<AppState>) -> HttpResponse {
         .unwrap();
 
     return resp.body(page);
+}
+
+fn truncate_by_chars(s: String, max_width: usize) -> String {
+    s.chars().take(max_width).collect()
 }
