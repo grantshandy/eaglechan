@@ -73,11 +73,14 @@ async fn main() -> io::Result<()> {
     HttpServer::new(move || {
         // init rate limiter
         let rate_limit_backend = InMemoryBackend::builder().build();
-        let rate_limit_input = SimpleInputFunctionBuilder::new(Duration::from_secs(60), 100)
+        let rate_limit_input = SimpleInputFunctionBuilder::new(Duration::from_secs(60), 400)
             .real_ip_key()
             .build();
 
         let rate_limiter = RateLimiter::builder(rate_limit_backend, rate_limit_input)
+            .request_denied_response(
+                |x| HttpResponse::Ok().body("400 req per min rate limit being imposed"),
+            )
             .add_headers()
             .build();
 
