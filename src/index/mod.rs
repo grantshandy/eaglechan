@@ -5,6 +5,9 @@ use crate::{AppState, DATE_FORMATTING};
 
 pub const TEMPLATE: &'static str = include_str!("index.hbs");
 
+const TITLE_CHAR_LIMIT: usize = 80;
+const CONTENT_CHAR_LIMIT: usize = 1000;
+
 #[derive(Serialize)]
 struct Thread {
     thread_id: String,
@@ -13,6 +16,7 @@ struct Thread {
     last_updated: String,
     title: String,
     content: String,
+    overflow: bool,
     // num_comments: usize,
 }
 
@@ -34,22 +38,49 @@ pub async fn get_index(req: HttpRequest, data: Data<AppState>) -> HttpResponse {
         .unwrap()
         .into_iter()
         .map(|x| {
+            let mut title = x.title;
+
+            // not I did not mean to use .chars().count(), idiot.
+            if title.len() > TITLE_CHAR_LIMIT {
+                title = title.drain(..TITLE_CHAR_LIMIT).collect();
+                title.push_str("...");
+            }
+
+            let mut content = x.content;
+
+            let overflow = if content.len() > CONTENT_CHAR_LIMIT {
+                content = content.drain(..CONTENT_CHAR_LIMIT).collect();
+                content.push_str("...");
+                
+                true
+            } else {
+                false
+            };
+
             Thread {
                 thread_id: x.thread_id,
                 user_id: x.user_id,
                 created: x.created.format(DATE_FORMATTING).to_string(),
                 last_updated: x.last_updated.format(DATE_FORMATTING).to_string(),
-                title: x.title,
-                content: x.content,
+                title,
+                content,
+                overflow,
             }
         })
         .collect();
-    
-        let num_threads = threads.len();
+
+    let num_threads = threads.len();
 
     let page: String = data
         .template_registry
-        .render("index", &PageState { threads, num_threads, user_id })
+        .render(
+            "index",
+            &PageState {
+                threads,
+                num_threads,
+                user_id,
+            },
+        )
         .unwrap();
 
     return resp.body(page);
