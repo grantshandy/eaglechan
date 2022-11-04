@@ -16,8 +16,8 @@ pub struct PostForm {
     pub content: String,
 }
 
-#[post("/upload")]
-pub async fn upload_post(
+#[post("/upload_thread")]
+pub async fn upload_thread(
     req: HttpRequest,
     data: Data<AppState>,
     form: Form<PostForm>,
@@ -25,18 +25,19 @@ pub async fn upload_post(
     let mut resp = HttpResponse::SeeOther();
     let user_id = crate::manage_cookies(&req, &data, &mut resp).await;
 
-    let post_id = rand::thread_rng()
+    let thread_id = rand::thread_rng()
         .sample_iter(&Alphanumeric)
         .take(6)
         .map(char::from)
-        .collect::<String>();
+        .collect::<String>()
+        .to_uppercase();
 
     let created: NaiveDateTime = Utc::now().naive_local();
     let last_updated = created.clone();
 
     sqlx::query!(
-        "INSERT INTO posts ( post_id, user_id, created, last_updated, title, content ) VALUES ( ?, ?, ?, ?, ?, ? )",
-        post_id,
+        "INSERT INTO threads ( thread_id, user_id, created, last_updated, title, content ) VALUES ( ?, ?, ?, ?, ?, ? )",
+        thread_id,
         user_id,
         created,
         last_updated,
@@ -60,23 +61,24 @@ pub struct CommentForm {
     content: String,
 }
 
-#[post("/comment-{post_id}")]
+#[post("/thread_comment_{thread_id}")]
 pub async fn upload_comment(
     req: HttpRequest,
     data: Data<AppState>,
-    post_id: Path<String>,
+    thread_id: Path<String>,
     form: Form<CommentForm>,
 ) -> HttpResponse {
     let mut resp = HttpResponse::SeeOther();
     let user_id = crate::manage_cookies(&req, &data, &mut resp).await;
 
     let created: NaiveDateTime = Utc::now().naive_local();
-    let post_id = post_id.to_string();
+    let thread_id = thread_id.to_string();
 
+    // insert comment
     sqlx::query!(
-        "INSERT INTO comments ( user_id, post_id, content, created ) VALUES ( ?, ?, ?, ? )",
+        "INSERT INTO comments ( user_id, thread_id, content, created ) VALUES ( ?, ?, ?, ? )",
         user_id,
-        post_id,
+        thread_id,
         form.content,
         created,
     )
@@ -84,9 +86,19 @@ pub async fn upload_comment(
     .await
     .expect("couldn't insert comment into database");
 
+    // update last updated
+    sqlx::query!(
+        "UPDATE threads SET last_updated = ? WHERE thread_id = ?",
+        created,
+        thread_id
+    )
+    .execute(&data.database)
+    .await
+    .expect("failed to update thread");
+
     resp.insert_header((
         header::LOCATION,
-        HeaderValue::from_str(&format!("/post-{post_id}")).expect("invalid header value"),
+        HeaderValue::from_str(&format!("/thread/{thread_id}")).expect("invalid header value"),
     ));
 
     return resp.finish();

@@ -11,25 +11,25 @@ use actix_web::{
     web::Data,
     App, HttpRequest, HttpResponse, HttpResponseBuilder, HttpServer,
 };
-use chrono::NaiveDateTime;
 use handlebars::Handlebars;
 use rand::{distributions::Alphanumeric, Rng};
-use serde::Serialize;
 use sqlx::SqlitePool;
 
 mod index;
 mod upload;
-mod view_post;
-mod write_post;
+mod view_thread;
+mod write_thread;
 
 const DATABASE_TEMPLATE: &[u8] = include_bytes!("template.db");
 const CSS: &'static str = include_str!("css/style.css");
 
+pub const DATE_FORMATTING: &'static str = "%Y/%m/%d %H:%M";
+
 // WEB ROUTES
 // GET "/" -> index::get_index                                 DONE
-// GET "/post-{post_id}" -> view_post::get_post                DONE
-// GET "/write" -> write_post::get_write_post                  DONE
-// POST "/upload" -> upload::upload_post                       DONE
+// GET "/thread/{thread_id}" -> view_thread::get_thread        DONE
+// GET "/write" -> write_thread::get_write_thread              DONE
+// POST "/upload" -> upload::upload_thread                     DONE
 // POST "/comment-{post_id}" upload::upload_comment            DONE
 
 #[derive(argh::FromArgs)]
@@ -50,24 +50,6 @@ struct Args {
 pub struct AppState {
     pub template_registry: Handlebars<'static>,
     pub database: SqlitePool,
-}
-
-#[derive(Serialize, Debug)]
-pub struct Post {
-    pub post_id: String,
-    pub user_id: String,
-    pub created: NaiveDateTime,
-    pub last_updated: NaiveDateTime,
-    pub title: String,
-    pub content: String,
-}
-
-#[derive(Serialize, Debug)]
-pub struct Comment {
-    pub user_id: String,
-    pub post_id: String,
-    pub created: NaiveDateTime,
-    pub content: String,
 }
 
 #[actix_web::main]
@@ -111,9 +93,9 @@ async fn main() -> io::Result<()> {
             .wrap(Logger::default())
             .service(css)
             .service(index::get_index)
-            .service(view_post::get_post)
-            .service(write_post::get_write_post)
-            .service(upload::upload_post)
+            .service(view_thread::get_thread)
+            .service(write_thread::get_write_thread)
+            .service(upload::upload_thread)
             .service(upload::upload_comment)
     })
     .bind((args.ip, args.port))?
@@ -144,11 +126,11 @@ fn generate_template_registry() -> Handlebars<'static> {
         .unwrap();
 
     template_registry
-        .register_template_string("view_post", view_post::TEMPLATE)
+        .register_template_string("view_thread", view_thread::TEMPLATE)
         .unwrap();
 
     template_registry
-        .register_template_string("write_post", write_post::TEMPLATE)
+        .register_template_string("write_thread", write_thread::TEMPLATE)
         .unwrap();
 
     return template_registry;
@@ -167,7 +149,8 @@ pub async fn manage_cookies(
                 .sample_iter(&Alphanumeric)
                 .take(6)
                 .map(char::from)
-                .collect::<String>();
+                .collect::<String>()
+                .to_lowercase();
 
             let user_token = rand::thread_rng()
                 .sample_iter(&Alphanumeric)
@@ -188,31 +171,33 @@ pub async fn manage_cookies(
         }
     };
 
-    let user_id: String = match 
-        sqlx::query!("SELECT user_id FROM users WHERE user_token = ?", user_token)
+    let user_id: String =
+        match sqlx::query!("SELECT user_id FROM users WHERE user_token = ?", user_token)
             .fetch_one(&data.database)
-            .await {
-        Ok(record) => record.user_id,
-        Err(_) => {
-            // if the user has an invalid user token (from an old session), then make a new one just to hold them over.
-            let user_id = rand::thread_rng()
-                .sample_iter(&Alphanumeric)
-                .take(6)
-                .map(char::from)
-                .collect::<String>();
-            
-            sqlx::query!(
-                "INSERT INTO users ( user_token, user_id ) VALUES ( ?, ? )",
-                user_token,
-                user_id
-            )
-            .execute(&data.database)
             .await
-            .expect("failed to insert new user_id and user_tokens into users");
-            
-            user_id
-        }
-    };
+        {
+            Ok(record) => record.user_id,
+            Err(_) => {
+                // if the user has an invalid user token (from an old session), then make a new one just to hold them over.
+                let user_id = rand::thread_rng()
+                    .sample_iter(&Alphanumeric)
+                    .take(6)
+                    .map(char::from)
+                    .collect::<String>()
+                    .to_lowercase();
+
+                sqlx::query!(
+                    "INSERT INTO users ( user_token, user_id ) VALUES ( ?, ? )",
+                    user_token,
+                    user_id
+                )
+                .execute(&data.database)
+                .await
+                .expect("failed to insert new user_id and user_tokens into users");
+
+                user_id
+            }
+        };
 
     if created {
         response.insert_header((
