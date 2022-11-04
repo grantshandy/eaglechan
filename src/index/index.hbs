@@ -22,14 +22,12 @@
 				{{#each threads}}
 				<div class="bg-slate-800 p-3 space-y-2 rounded-md shadow-md">
 					<div class="w-full flow-root">
-						<div class="float-left text-left">
-							<h3 class="font-semibold text-lg">{{ title }} <span class="text-sm font-light">by {{ user_id }}</span></h3>
-							<p class="text-sm italic">created {{ created }}</p>
-						</div>
-						<div class="float-right text-right">
-							<p class="underline"><a href="/thread/{{ thread_id }}">View Thread {{ thread_id }}</a></p>
-							<p class="text-sm italic">last updated {{ last_updated }}</p>
-						</div>
+							<h3 class="float-left break-all font-semibold text-lg">{{ title }} <span class="text-sm font-light">by {{ user_id }}</span></h3>
+							<p class="float-right underline"><a href="/thread/{{ thread_id }}">View Thread {{ thread_id }}</a></p>
+					</div>
+					<div class="w-full flow-root">
+							<p class="float-left text-sm italic">created {{ created }}</p>
+							<p class="float-right text-sm italic">last updated {{ last_updated }}</p>
 					</div>
 					<p class="whitespace-pre-wrap break-all">{{{ content }}}</p>
 				</div>
