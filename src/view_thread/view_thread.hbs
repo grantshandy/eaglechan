@@ -28,7 +28,7 @@
 						<p class="whitespace-pre-wrap break-all">{{{ thread.content }}}</p>
 					</div>
 					<hr>
-					<form class="w-full flex space-x-2" action="/thread_comment_{{ thread.thread_id }}" method="post">
+					<form class="w-full flex space-x-2" action="/thread/{{ thread.thread_id }}/upload" method="post">
 						<textarea name="content" placeholder="Write something here..." rows="2" class="grow pl-2 py-1 bg-slate-700 rounded-md shadow-md" required></textarea>
 						<div class="items-center flex">
 							<input class="px-2 py-1 bg-slate-700 font-semibold rounded-md shadow-md" type="submit" value="Submit">

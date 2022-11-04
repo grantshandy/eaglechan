@@ -50,6 +50,7 @@ pub async fn get_index(req: HttpRequest, data: Data<AppState>) -> HttpResponse {
 
             let overflow = if content.len() > CONTENT_CHAR_LIMIT {
                 content = content.drain(..CONTENT_CHAR_LIMIT).collect();
+                content = content.replace("\n", " ");
                 content.push_str("...");
                 
                 true

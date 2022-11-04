@@ -16,7 +16,7 @@ pub struct PostForm {
     pub content: String,
 }
 
-#[post("/upload_thread")]
+#[post("/upload")]
 pub async fn upload_thread(
     req: HttpRequest,
     data: Data<AppState>,
@@ -61,7 +61,7 @@ pub struct CommentForm {
     content: String,
 }
 
-#[post("/thread_comment_{thread_id}")]
+#[post("/thread/{thread_id}/upload")]
 pub async fn upload_comment(
     req: HttpRequest,
     data: Data<AppState>,
