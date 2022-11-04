@@ -29,7 +29,7 @@
 							<p class="float-left text-sm italic">created {{ created }}</p>
 							<p class="float-right text-sm italic">last updated {{ last_updated }}</p>
 					</div>
-					<p class="whitespace-pre-wrap break-all">{{{ content }}}{{ #if overflow }} <a href="/thread/{{ thread_id }}" class="underline">view full thread</a>{{ /if}}</p>
+					<p class="break-all">{{ content }}{{ #if overflow }} <a href="/thread/{{ thread_id }}" class="underline">view full thread</a>{{ /if}}</p>
 				</div>
 				{{/each}}
 			</div>

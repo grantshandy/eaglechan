@@ -5,8 +5,8 @@ use crate::{AppState, DATE_FORMATTING};
 
 pub const TEMPLATE: &'static str = include_str!("index.hbs");
 
-const TITLE_CHAR_LIMIT: usize = 80;
-const CONTENT_CHAR_LIMIT: usize = 1000;
+const TITLE_CHAR_LIMIT: usize = 60;
+const CONTENT_CHAR_LIMIT: usize = 700;
 
 #[derive(Serialize)]
 struct Thread {
@@ -50,9 +50,9 @@ pub async fn get_index(req: HttpRequest, data: Data<AppState>) -> HttpResponse {
 
             let overflow = if content.len() > CONTENT_CHAR_LIMIT {
                 content = content.drain(..CONTENT_CHAR_LIMIT).collect();
-                content = content.replace("\n", " ");
+                content = content.replace("\n", "");
                 content.push_str("...");
-                
+
                 true
             } else {
                 false
