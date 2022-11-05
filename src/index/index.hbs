@@ -7,27 +7,27 @@
 	<meta name="viewport" content="width=device-width,initial-scale=1" />
 </head>
 <body>
-	<div class="min-h-screen bg-slate-900 text-sky-100">
-		<div class="min-h-screen w-5/6 md:w-2/3 lg:w-1/2 mx-auto pt-6 py-2 space-y-5">
-			<div class="text-center w-full space-y-2">
-				<h1 class="text-xl md:text-2xl lg:text-3xl font-bold">Javascript-less Forum</h1>
+	<div class="background">
+		<div class="content-box">
+			<div class="title-box">
+				<h1 class="title">Javascript-less Forum</h1>
 				<p>A simple anonymous forum.</p>
 				<p class="italic">You are {{user_id}}</p>
 			</div>
 			<div class="w-full space-y-2">
-				<div class="w-full flow-root px-1">
-					<h2 class="float-left text-center text-lg md:text-xl lg:text-2xl">Threads <span class="text-sm font-light">{{ num_threads}} threads</span></h2>
-					<p class="float-right text-right underline"><a href="/write">Create a New Thread</a><p>
+				<div class="header">
+					<h2 class="left-header">Threads <span class="text-sm font-light">{{ num_threads}} threads</span></h2>
+					<p class="right-link"><a href="/write">Create a New Thread</a><p>
 				</div>
 				{{#each threads}}
-				<div class="bg-slate-800 p-3 space-y-2 rounded-md shadow-md">
+				<div class="index-thread">
 					<div class="w-full flow-root">
-							<h3 class="float-left break-all font-semibold text-lg">{{ title }} <span class="text-sm font-light">by {{ user_id }}</span></h3>
+							<h3 class="index-thread-title">{{ title }} <span class="text-sm font-light">by {{ user_id }}</span></h3>
 							<p class="float-right underline"><a href="/thread/{{ thread_id }}">View Thread {{ thread_id }}</a></p>
 					</div>
 					<div class="w-full flow-root">
-							<p class="float-left text-sm italic">created {{ created }}</p>
-							<p class="float-right text-sm italic">last updated {{ last_updated }}</p>
+							<p class="float-left date">created {{ created }}</p>
+							<p class="float-right date">last updated {{ last_updated }}</p>
 					</div>
 					<p class="break-all">{{ content }}{{ #if overflow }} <a href="/thread/{{ thread_id }}" class="underline">view full thread</a>{{ /if}}</p>
 				</div>
