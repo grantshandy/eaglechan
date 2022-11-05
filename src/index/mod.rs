@@ -17,7 +17,7 @@ struct Thread {
     title: String,
     content: String,
     overflow: bool,
-    // num_comments: usize,
+    num_comments: i32,
 }
 
 #[derive(Serialize)]
@@ -32,41 +32,65 @@ pub async fn get_index(req: HttpRequest, data: Data<AppState>) -> HttpResponse {
     let mut resp = HttpResponse::Ok();
     let user_id = crate::manage_cookies(&req, &data, &mut resp).await;
 
-    let threads: Vec<Thread> = sqlx::query!("SELECT * FROM threads ORDER BY last_updated DESC")
-        .fetch_all(&data.database)
-        .await
-        .unwrap()
-        .into_iter()
-        .map(|x| {
-            let mut title = x.title;
+    let threads: Vec<Thread> = sqlx::query!(
+        r#"
+        SELECT 
+            threads.thread_id,
+            threads.user_id,
+            threads.created,
+            threads.last_updated,
+            threads.title,
+            threads.content,
+            COALESCE(comments.num_comments, 0) AS "num_comments!"
+        FROM
+            threads
+        LEFT JOIN
+            (SELECT thread_id, COUNT(thread_id) num_comments
+            FROM comments
+            GROUP BY thread_id) comments
+            ON threads.thread_id = comments.thread_id
+        "#
+        // ORDER BY
+        //     last_updated DESC
+        // "#
+    )
+    .fetch_all(&data.database)
+    .await
+    .unwrap()
+    .into_iter()
+    .map(|x| {
+        let num_comments: i32 = x.num_comments;
 
-            if title.len() > TITLE_CHAR_LIMIT {
-                title = truncate_by_chars(title, TITLE_CHAR_LIMIT);
-                title.push_str("...");
-            }
+        let mut title = x.title;
 
-            let mut content = x.content;
+        if title.len() > TITLE_CHAR_LIMIT {
+            title = truncate_by_chars(title, TITLE_CHAR_LIMIT);
+            title.push_str("...");
+        }
 
-            let overflow = if content.len() > CONTENT_CHAR_LIMIT {
-                content = truncate_by_chars(content, CONTENT_CHAR_LIMIT);
-                content.push_str("...");
+        let mut content = x.content;
 
-                true
-            } else {
-                false
-            };
+        let overflow = if content.len() > CONTENT_CHAR_LIMIT {
+            content = truncate_by_chars(content, CONTENT_CHAR_LIMIT);
+            content.push_str("...");
 
-            Thread {
-                thread_id: x.thread_id,
-                user_id: x.user_id,
-                created: x.created.format(DATE_FORMATTING).to_string(),
-                last_updated: x.last_updated.format(DATE_FORMATTING).to_string(),
-                title,
-                content,
-                overflow,
-            }
-        })
-        .collect();
+            true
+        } else {
+            false
+        };
+
+        Thread {
+            thread_id: x.thread_id,
+            user_id: x.user_id,
+            created: x.created.format(DATE_FORMATTING).to_string(),
+            last_updated: x.last_updated.format(DATE_FORMATTING).to_string(),
+            title,
+            content,
+            overflow,
+            num_comments,
+        }
+    })
+    .collect();
 
     let num_threads = threads.len();
 

@@ -22,8 +22,8 @@
 				{{#each threads}}
 				<div class="index-thread">
 					<div class="w-full flow-root">
-							<h3 class="index-thread-title">{{ title }} <span class="text-sm font-light">by {{ user_id }}</span></h3>
-							<p class="float-right underline"><a href="/thread/{{ thread_id }}">View Thread {{ thread_id }}</a></p>
+							<h3 class="index-thread-title">{{ title }} <span class="text-sm font-light">by {{ user_id }}, {{ num_comments }} comments</span></h3>
+							<p class="float-right"><a class="underline" href="/thread/{{ thread_id }}">View Thread {{ thread_id }}</a></p>
 					</div>
 					<div class="w-full flow-root">
 							<p class="float-left date">created {{ created }}</p>
