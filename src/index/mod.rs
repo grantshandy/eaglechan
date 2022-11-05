@@ -19,6 +19,7 @@ struct Thread {
     content: String,
     overflow: bool,
     num_comments: i32,
+    multiple_comments: bool,
 }
 
 #[derive(Serialize)]
@@ -89,6 +90,7 @@ pub async fn get_index(req: HttpRequest, data: Data<AppState>) -> HttpResponse {
             content,
             overflow,
             num_comments,
+            multiple_comments: num_comments > 1
         }
     })
     .collect();
