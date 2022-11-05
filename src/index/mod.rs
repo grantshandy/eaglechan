@@ -1,5 +1,6 @@
 use actix_web::{get, web::Data, HttpRequest, HttpResponse};
 use serde::Serialize;
+use itertools::Itertools;
 
 use crate::{AppState, DATE_FORMATTING};
 
@@ -50,14 +51,14 @@ pub async fn get_index(req: HttpRequest, data: Data<AppState>) -> HttpResponse {
             GROUP BY thread_id) comments
             ON threads.thread_id = comments.thread_id
         "#
-        // ORDER BY
-        //     last_updated DESC
-        // "#
     )
     .fetch_all(&data.database)
     .await
     .unwrap()
     .into_iter()
+    // I have to sort it manually here in rust instead of in the sql
+    // query because sqlx doesn't like ORDER BY in this query?
+    .sorted_by(|a, b| Ord::cmp(&b.last_updated, &a.last_updated))
     .map(|x| {
         let num_comments: i32 = x.num_comments;
 
